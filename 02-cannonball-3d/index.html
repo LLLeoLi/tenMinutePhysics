@@ -7,17 +7,30 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 -->
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
+	<head>
+		<title>Cannonball 3d</title>
+		<style>
+		body {
+			font-family: verdana; 
+			font-size: 15px;
+		}
+		</style>
+	</head>
+	
+	<body>
 
-<head>
-<title>Cannonball</title>
-</head>
+        <h1>Cannonball 3d</h1> 
+		<button id = "buttonRun" onclick="run()" class="button">Run</button>
+		<button onclick="restart()" class="button">Restart</button>
 
-<body>
-
-<canvas id="myCanvas" style="border:2px solid"></canvas>
-
-<script src="./01-cannonball2d.js"></script> 
-</body>
+		<br><br>		
+        <div id="container"></div>
+        
+        <script src="https://unpkg.com/three@0.139.2/build/three.min.js"></script>
+        <script src="https://unpkg.com/three@0.139.2/examples/js/controls/OrbitControls.js"></script>
+		<script src="./index.js"></script>
+	</body>
 </html>
