@@ -101,7 +101,7 @@ let physicsScene = {
 function setupScene() {
     physicsScene.balls = []
     let numBalls = 20
-
+    // 随机生成20个小球
     for (i = 0; i < numBalls; i++) {
         let radius = 0.05 + Math.random() * 0.1
         let mass = Math.PI * radius * radius
@@ -135,22 +135,22 @@ function handleBallCollision(ball1, ball2, restitution) {
     dir.subtractVectors(ball2.pos, ball1.pos)
     let d = dir.length()
     if (d == 0.0 || d > ball1.radius + ball2.radius) return
-
+    // 单位化
     dir.scale(1.0 / d)
-
+    // 更新距离
     let corr = (ball1.radius + ball2.radius - d) / 2.0
     ball1.pos.add(dir, -corr)
     ball2.pos.add(dir, corr)
-
+    // 获得碰撞方向上的速度
     let v1 = ball1.vel.dot(dir)
     let v2 = ball2.vel.dot(dir)
 
     let m1 = ball1.mass
     let m2 = ball2.mass
-
+    // 计算碰撞后的碰撞方向上的速度
     let newV1 = (m1 * v1 + m2 * v2 - m2 * (v1 - v2) * restitution) / (m1 + m2)
     let newV2 = (m1 * v1 + m2 * v2 - m1 * (v2 - v1) * restitution) / (m1 + m2)
-
+    // 更新碰撞后速度
     ball1.vel.add(dir, newV1 - v1)
     ball2.vel.add(dir, newV2 - v2)
 }
@@ -180,6 +180,7 @@ function handleWallCollision(ball, worldSize) {
 // simulation -------------------------------------------------------
 
 function simulate() {
+    // 可以看到这里的复杂度是O(n^2)
     for (i = 0; i < physicsScene.balls.length; i++) {
         let ball1 = physicsScene.balls[i]
         ball1.simulate(physicsScene.dt, physicsScene.gravity)
