@@ -92,32 +92,40 @@ let gPhysicsScene = {
 class SoftBody {
     constructor(tetMesh, scene, edgeCompliance = 100.0, volCompliance = 0.0) {
         // physics
-
+        // 点的数量
         this.numParticles = tetMesh.verts.length / 3
+        // 四面体数量
         this.numTets = tetMesh.tetIds.length / 4
+        // Body各个点位置
         this.pos = new Float32Array(tetMesh.verts)
+        // 先前位置，用于
         this.prevPos = tetMesh.verts.slice()
+        // 存储各个点的速度
         this.vel = new Float32Array(3 * this.numParticles)
-
+        // 四面体顶点索引
         this.tetIds = tetMesh.tetIds
+        // 四面体边索引
         this.edgeIds = tetMesh.tetEdgeIds
+        // 
         this.restVol = new Float32Array(this.numTets)
+        // 边数量
         this.edgeLengths = new Float32Array(this.edgeIds.length / 2)
+        // 存储每个粒子质量的逆
         this.invMass = new Float32Array(this.numParticles)
-
+        // 边和体积的弹性系数，用于模拟约束
         this.edgeCompliance = edgeCompliance
         this.volCompliance = volCompliance
 
         this.temp = new Float32Array(4 * 3)
         this.grads = new Float32Array(4 * 3)
-
+        // 计算被拖拽粒子的索引和逆质量
         this.grabId = -1
         this.grabInvMass = 0.0
 
         this.initPhysics()
 
         // surface tri mesh
-
+        // 创建三角形网络模型并将其加入场景中
         let geometry = new THREE.BufferGeometry()
         geometry.setAttribute('position', new THREE.BufferAttribute(this.pos, 3))
         geometry.setIndex(tetMesh.tetSurfaceTriIds)
@@ -151,7 +159,7 @@ class SoftBody {
         this.surfaceMesh.geometry.attributes.position.needsUpdate = true
         this.surfaceMesh.geometry.computeBoundingSphere()
     }
-
+    // 计算四面体体积
     getTetVolume(nr) {
         let id0 = this.tetIds[4 * nr]
         let id1 = this.tetIds[4 * nr + 1]
@@ -167,7 +175,7 @@ class SoftBody {
     initPhysics() {
         this.invMass.fill(0.0)
         this.restVol.fill(0.0)
-
+        // 计算四面体逆质量
         for (let i = 0; i < this.numTets; i++) {
             let vol = this.getTetVolume(i)
             this.restVol[i] = vol
@@ -177,13 +185,14 @@ class SoftBody {
             this.invMass[this.tetIds[4 * i + 2]] += pInvMass
             this.invMass[this.tetIds[4 * i + 3]] += pInvMass
         }
+        // 计算每条边的长度
         for (let i = 0; i < this.edgeLengths.length; i++) {
             let id0 = this.edgeIds[2 * i]
             let id1 = this.edgeIds[2 * i + 1]
             this.edgeLengths[i] = Math.sqrt(vecDistSquared(this.pos, id0, this.pos, id1))
         }
     }
-
+    // 对位置和速度更新，并且检查碰撞
     preSolve(dt, gravity) {
         for (let i = 0; i < this.numParticles; i++) {
             if (this.invMass[i] == 0.0) continue
@@ -197,12 +206,12 @@ class SoftBody {
             }
         }
     }
-
+    // 通过约束修改粒子位置
     solve(dt) {
         this.solveEdges(this.edgeCompliance, dt)
         this.solveVolumes(this.volCompliance, dt)
     }
-
+    // 计算粒子的速度差异，并更新网络
     postSolve(dt) {
         for (let i = 0; i < this.numParticles; i++) {
             if (this.invMass[i] == 0.0) continue
@@ -210,7 +219,7 @@ class SoftBody {
         }
         this.updateMeshes()
     }
-
+    // XPBD处理，对边长进行约束
     solveEdges(compliance, dt) {
         let alpha = compliance / dt / dt
 
@@ -233,7 +242,7 @@ class SoftBody {
             vecAdd(this.pos, id1, this.grads, 0, -s * w1)
         }
     }
-
+    // XPBD处理，对体积进行约束
     solveVolumes(compliance, dt) {
         let alpha = compliance / dt / dt
 
@@ -265,14 +274,14 @@ class SoftBody {
             }
         }
     }
-
+    // 把所有的y坐标设为0.5
     squash() {
         for (let i = 0; i < this.numParticles; i++) {
             this.pos[3 * i + 1] = 0.5
         }
         this.updateMeshes()
     }
-
+    // 开始抓取
     startGrab(pos) {
         let p = [pos.x, pos.y, pos.z]
         let minD2 = Number.MAX_VALUE
@@ -291,14 +300,14 @@ class SoftBody {
             vecCopy(this.pos, this.grabId, p, 0)
         }
     }
-
+    // 进行抓取移动
     moveGrabbed(pos, vel) {
         if (this.grabId >= 0) {
             let p = [pos.x, pos.y, pos.z]
             vecCopy(this.pos, this.grabId, p, 0)
         }
     }
-
+    // 结束抓取
     endGrab(pos, vel) {
         if (this.grabId >= 0) {
             this.invMass[this.grabId] = this.grabInvMass
@@ -529,10 +538,12 @@ function squash() {
 
 function newBody() {
     body = new SoftBody(bunnyMesh, gThreeScene)
+    // 平移物体
     body.translate(-1.0 + 2.0 * Math.random(), 0.0, -1.0 + 2.0 * Math.random())
     gPhysicsScene.objects.push(body)
 
     let numTets = 0
+    // 得到场景中四面体总数
     for (let i = 0; i < gPhysicsScene.objects.length; i++) numTets += gPhysicsScene.objects[i].numTets
     document.getElementById('numTets').innerHTML = numTets
 }
@@ -547,6 +558,7 @@ function update() {
 // 使用blender导出的模型，通过插件导出为json格式
 let bunnyMesh = {
     name: 'bunnyTets',
+    // 顶点坐标
     verts: [
         0.1667, 0.032, 0.0191, 0.1474, 0.0432, 0.1918, 0.2237, 0.0267, 0.1427, -0.0349, 0.0627, 0.1842, -0.1422, 0.0246, 0.1666, -0.1443, 0.0308, 0.2591, -0.152, 0.0275, 0.0863, -0.1235, 0.0481, -0.023, -0.1631, 0.0197, 0.0288, -0.0744, 0.0422, 0.0948, -0.4601, 0.6411, 0.0977, -0.4277, 0.4754,
         0.0296, -0.0827, 0.5775, 0.0648, -0.0923, 0.5318, 0.1807, -0.2836, 0.0971, 0.2413, 0.1341, 0.6095, 0.1176, -0.2581, 0.7327, 0.1967, -0.41, 0.2577, 0.0661, -0.4343, 0.3047, 0.0676, -0.4551, 0.3656, 0.1178, 0.4151, 0.2519, 0.1277, 0.4491, 0.2292, 0.1095, -0.194, 0.8358, -0.0275, -0.3391,
@@ -578,6 +590,7 @@ let bunnyMesh = {
         0.0961, 0.1701, 0.3939, 0.1897, 0.1701, 0.4877, 0.0023, 0.1701, 0.4877, 0.0959, 0.1701, 0.4877, 0.1897, 0.2634, 0.1132, 0.0026, 0.2634, 0.1132, 0.096, 0.2634, 0.2064, 0.0023, 0.2634, 0.2064, 0.0961, 0.2634, 0.2064, 0.1896, 0.2634, 0.3001, 0.0022, 0.2634, 0.3001, 0.096, 0.2634, 0.3001,
         0.1898, 0.2634, 0.3941, 0.0026, 0.2634, 0.3941, 0.0958, 0.2634, 0.3941, 0.1895, 0.3571, 0.2069, 0.0957
     ],
+    // 四面体顶点索引
     tetIds: [
         233, 6, 8, 245, 100, 51, 33, 186, 287, 283, 286, 308, 206, 1, 197, 283, 5, 3, 4, 247, 9, 4, 3, 247, 197, 0, 179, 282, 163, 14, 108, 174, 50, 5, 3, 148, 281, 167, 202, 302, 71, 70, 32, 225, 245, 6, 9, 246, 75, 4, 54, 135, 265, 251, 248, 269, 210, 172, 138, 261, 9, 7, 8, 245, 107, 7, 8, 209,
         276, 275, 260, 279, 50, 3, 5, 247, 158, 156, 26, 255, 234, 100, 220, 236, 45, 36, 40, 232, 187, 12, 182, 199, 228, 216, 226, 229, 198, 195, 166, 220, 9, 6, 4, 246, 233, 8, 186, 245, 237, 236, 221, 240, 286, 283, 282, 303, 290, 265, 285, 291, 252, 236, 249, 253, 108, 5, 4, 117, 124, 93, 63,
@@ -669,6 +682,7 @@ let bunnyMesh = {
         330, 319, 318, 184, 329, 318, 315, 149, 329, 326, 74, 122, 329, 326, 122, 121, 329, 314, 121, 185, 329, 329, 311, 327, 330, 328, 317, 142, 331, 330, 155, 96, 331, 184, 64, 96, 330, 330, 96, 319, 331, 330, 327, 155, 331, 327, 312, 313, 331, 328, 327, 313, 331, 320, 96, 87, 331, 320, 87, 317,
         331, 147, 65, 91, 332, 147, 66, 65, 332, 130, 21, 20, 332, 151, 95, 110, 332, 322, 97, 95, 332, 327, 91, 111, 332, 327, 324, 91, 332
     ],
+    // 四面体边索引
     tetEdgeIds: [
         0, 2, 0, 99, 0, 178, 0, 179, 0, 193, 0, 197, 0, 282, 0, 303, 0, 304, 0, 321, 1, 2, 1, 3, 1, 84, 1, 133, 1, 148, 1, 160, 1, 197, 1, 206, 1, 283, 1, 284, 1, 304, 1, 305, 2, 95, 2, 97, 2, 151, 2, 160, 2, 193, 2, 197, 2, 304, 2, 305, 2, 322, 3, 4, 3, 5, 3, 9, 3, 50, 3, 127, 3, 131, 3, 133, 3,
         148, 3, 206, 3, 246, 3, 247, 3, 263, 3, 264, 3, 284, 4, 5, 4, 6, 4, 9, 4, 54, 4, 75, 4, 108, 4, 117, 4, 118, 4, 135, 4, 163, 4, 174, 4, 207, 4, 233, 4, 246, 4, 247, 5, 50, 5, 108, 5, 117, 5, 118, 5, 148, 5, 163, 5, 247, 6, 8, 6, 9, 6, 54, 6, 207, 6, 233, 6, 245, 6, 246, 7, 8, 7, 9, 7, 33, 7,
@@ -734,6 +748,7 @@ let bunnyMesh = {
         330, 319, 331, 320, 331, 321, 322, 321, 323, 321, 324, 321, 332, 322, 324, 322, 325, 322, 332, 323, 324, 323, 326, 323, 327, 323, 332, 324, 325, 324, 327, 324, 332, 325, 327, 325, 328, 325, 332, 326, 327, 326, 329, 327, 328, 327, 329, 327, 330, 327, 331, 327, 332, 328, 331, 329, 330, 330,
         331
     ],
+    // 四面体表面三角形
     tetSurfaceTriIds: [
         2, 0, 193, 0, 2, 197, 99, 0, 178, 0, 99, 193, 178, 0, 197, 1, 2, 160, 2, 1, 197, 3, 1, 148, 1, 3, 206, 148, 1, 160, 197, 1, 206, 2, 95, 97, 95, 2, 151, 2, 97, 160, 151, 2, 193, 4, 3, 5, 3, 4, 9, 5, 3, 148, 3, 9, 206, 4, 5, 163, 4, 6, 9, 6, 4, 207, 4, 163, 207, 5, 50, 118, 50, 5, 148, 108, 5,
         118, 5, 108, 163, 6, 8, 9, 8, 6, 207, 8, 7, 9, 7, 8, 209, 9, 7, 210, 7, 209, 210, 8, 30, 107, 30, 8, 207, 8, 107, 209, 9, 179, 206, 179, 9, 210, 35, 10, 79, 10, 35, 141, 10, 46, 79, 46, 10, 141, 11, 34, 166, 34, 11, 171, 42, 11, 198, 11, 42, 214, 11, 46, 171, 46, 11, 214, 11, 166, 198, 12,
